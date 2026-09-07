@@ -24,7 +24,13 @@ import {
   Show,
   on,
 } from "solid-js"
-import { TuiPathsProvider, TuiStartupProvider, TuiTerminalEnvironmentProvider, useTuiStartup } from "./context/runtime"
+import {
+  TuiPathsProvider,
+  TuiStartupProvider,
+  TuiTerminalEnvironmentProvider,
+  useTuiStartup,
+  useTuiPaths,
+} from "./context/runtime"
 import { DialogProvider, useDialog } from "./ui/dialog"
 import { DialogProvider as DialogProviderList } from "./component/dialog-provider"
 import { ErrorComponent } from "./component/error-component"
@@ -364,6 +370,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
 
 function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPluginHost }) {
   const startup = useTuiStartup()
+  const paths = useTuiPaths()
   const tuiConfig = useTuiConfig()
   const route = useRoute()
   const dimensions = useTerminalDimensions()
@@ -476,6 +483,21 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
   })
 
   const args = useArgs()
+  onMount(() => {
+    let disposed = false
+    onCleanup(() => {
+      disposed = true
+    })
+    void (async () => {
+      const { checkUpstreamUpdate } = await import("./util/upstream-update")
+      if (!(await checkUpstreamUpdate({ state: paths.state })) || disposed) return
+      toast.show({
+        variant: "info",
+        message: "Upstream updates available · last checked today. Merge upstream/dev when ready.",
+        duration: 8000,
+      })
+    })().catch(() => undefined)
+  })
   onMount(() => {
     batch(() => {
       if (args.agent) local.agent.set(args.agent)
