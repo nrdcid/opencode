@@ -641,6 +641,21 @@ function App() {
   const args = useArgs()
   const startupPrompt = args.prompt ? { text: args.prompt, files: [], agents: [], pasted: [] } : undefined
   onMount(() => {
+    let disposed = false
+    onCleanup(() => {
+      disposed = true
+    })
+    void (async () => {
+      const { checkUpstreamUpdate } = await import("./util/upstream-update")
+      if (!(await checkUpstreamUpdate({ state: paths.state })) || disposed) return
+      toast.show({
+        variant: "info",
+        message: "Upstream updates available · last checked today. Merge upstream/dev when ready.",
+        duration: 8000,
+      })
+    })().catch(() => undefined)
+  })
+  onMount(() => {
     batch(() => {
       if (args.agent) local.agent.set(args.agent)
       if (args.model) {
